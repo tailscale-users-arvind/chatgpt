@@ -2,73 +2,53 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EMI & Loan Tracker with Supabase</title>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f2f2f2; }
-    .container { max-width: 500px; margin: auto; background: #fff; padding: 20px; border-radius: 10px; }
-    h2 { text-align: center; }
-    input, button { width: 100%; padding: 10px; margin: 10px 0; }
-    .transaction { margin: 10px 0; background: #e8e8e8; padding: 10px; border-radius: 6px; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+  <title>Spending Tracker</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container">
-    <h2>EMI Calculator</h2>
-    <input type="number" id="loanAmount" placeholder="Loan Amount" />
-    <input type="number" id="interestRate" placeholder="Interest Rate (%)" />
-    <input type="number" id="tenure" placeholder="Tenure (Months)" />
-    <button onclick="calculateEMI()">Calculate EMI</button>
-    <p id="emiResult"></p>
+  <header>
+    <h1>Spending Tracker</h1>
+    <div id="balance">$0.00</div>
+  </header>
 
-    <h2>Transaction Tracker</h2>
-    <input type="text" id="desc" placeholder="Description" />
-    <input type="number" id="amount" placeholder="Amount (+ for credit, - for debit)" />
-    <button onclick="addTransaction()">Add Transaction</button>
-    <div id="transactionList"></div>
-  </div>
+  <main>
+    <section id="transaction-form">
+      <h2>Add Transaction</h2>
+      <form id="addTransaction">
+        <input type="text" id="desc" placeholder="Description" required />
+        <input type="number" step="0.01" id="amount" placeholder="Amount" required />
+        <select id="type" required>
+          <option value="expense">Expense</option>
+          <option value="income">Income</option>
+        </select>
 
-  <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-    const supabase = createClient(
-      'https://vbyahvygfzdmhdrudcyw.supabase.co',
-      'your-anon-key-here'
-    );
+        <div id="expenseDetails" class="hidden">
+          <input type="text" id="category" placeholder="Expense Category" />
+          <label class="recurring-row">
+            <input type="checkbox" id="recurring" /> Recurring?
+          </label>
+          <div id="recurringDetails" class="hidden">
+            <input type="date" id="startDate" />
+            <select id="frequency">
+              <option value="weekly">Weekly</option>
+              <option value="fortnight">Fortnight</option>
+              <option value="monthly">Monthly</option>
+              <option value="quarterly">Quarterly</option>
+            </select>
+          </div>
+        </div>
 
-    function calculateEMI() {
-      const P = parseFloat(document.getElementById('loanAmount').value);
-      const R = parseFloat(document.getElementById('interestRate').value) / 1200;
-      const N = parseInt(document.getElementById('tenure').value);
-      const EMI = (P * R * Math.pow(1 + R, N)) / (Math.pow(1 + R, N) - 1);
-      const total = EMI * N;
-      document.getElementById('emiResult').innerText =
-        `Monthly EMI: $${EMI.toFixed(2)} | Total Payable: $${total.toFixed(2)}`;
-    }
+        <button type="submit">Add</button>
+      </form>
+    </section>
 
-    async function addTransaction() {
-      const desc = document.getElementById('desc').value;
-      const amount = parseFloat(document.getElementById('amount').value);
-      if (!desc || isNaN(amount)) return alert('Please enter valid details');
+    <section id="transactions">
+      <h2>Transactions</h2>
+      <ul id="transactionList"></ul>
+    </section>
+  </main>
 
-      const { data, error } = await supabase.from('transactions').insert([{ description: desc, amount }]);
-      if (error) return alert('Error adding transaction');
-      fetchTransactions();
-    }
-
-    async function fetchTransactions() {
-      const { data, error } = await supabase.from('transactions').select('*').order('id', { ascending: false });
-      if (error) return;
-      const container = document.getElementById('transactionList');
-      container.innerHTML = '';
-      data.forEach(t => {
-        const el = document.createElement('div');
-        el.className = 'transaction';
-        el.textContent = `${t.description}: $${t.amount}`;
-        container.appendChild(el);
-      });
-    }
-
-    fetchTransactions();
-  </script>
+  <script src="app.js"></script>
 </body>
 </html>

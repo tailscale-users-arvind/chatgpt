@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+  <title>Spending Tracker</title>
+  <style>
+    /* Base styles */
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    header {
+      background: #2e86de;
+      color: #fff;
+      padding: 1rem;
+      text-align: center;
+    }
+    main {
+      flex: 1;
+      padding: 1rem;
+      max-width: 600px;
+      margin: auto;
+    }
+    #transaction-form, #transactions {
+      margin-bottom: 2rem;
+    }
+    form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    form input, form select, form button, label.recurring-row {
+      flex: 1 1 45%;
+      padding: 0.5rem;
+    }
+    #transactionList {
+      list-style: none;
+      padding: 0;
+    }
+    #transactionList li {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem;
+      border-bottom: 1px solid #ddd;
+    }
+    #transactionList li.expense { color: #c0392b; }
+    #transactionList li.income  { color: #27ae60; }
+    .hidden {
+      display: none;
+    }
+    /* Responsive tweaks */
+    @media (min-width: 768px) {
+      form input, form select, form button, label.recurring-row {
+        flex: 1 1 30%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Spending Tracker</h1>
+    <div id="balance">$0.00</div>
+  </header>
+
+  <main>
+    <section id="transaction-form">
+      <h2>Add Transaction</h2>
+      <form id="addTransaction">
+        <input type="text" id="desc" placeholder="Description" required />
+        <input type="number" step="0.01" id="amount" placeholder="Amount" required />
+        <select id="type" required>
+          <option value="expense">Expense</option>
+          <option value="income">Income</option>
+        </select>
+
+        <div id="expenseDetails" class="hidden">
+          <input type="text" id="category" placeholder="Expense Category" />
+          <label class="recurring-row">
+            <input type="checkbox" id="recurring" /> Recurring?
+          </label>
+          <div id="recurringDetails" class="hidden">
+            <input type="date" id="startDate" />
+            <select id="frequency">
+              <option value="weekly">Weekly</option>
+              <option value="fortnight">Fortnight</option>
+              <option value="monthly">Monthly</option>
+              <option value="quarterly">Quarterly</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit">Add</button>
+      </form>
+    </section>
+
+    <section id="transactions">
+      <h2>Transactions</h2>
+      <ul id="transactionList"></ul>
+    </section>
+  </main>
+
+  <script>
+    const addTransactionForm = document.getElementById('addTransaction');
+    const transactionList   = document.getElementById('transactionList');
+    const balanceDiv        = document.getElementById('balance');
+    const typeSelect        = document.getElementById('type');
+    const expenseDetails    = document.getElementById('expenseDetails');
+    const recurringCheckbox = document.getElementById('recurring');
+    const recurringDetails  = document.getElementById('recurringDetails');
+
+    let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+
+    function updateUI() {
+      transactionList.innerHTML = '';
+      let balance = 0;
+
+      transactions.forEach((t, index) => {
+        balance += t.type === 'expense' ? -t.amount : t.amount;
+
+        const details = [];
+        if (t.type === 'expense' && t.category) details.push(t.category);
+        if (t.recurring) details.push(`${t.frequency} from ${t.startDate}`);
+        const detailText = details.length ? ` (${details.join(', ')})` : '';
+
+        const li = document.createElement('li');
+        li.classList.add(t.type);
+        li.innerHTML = `
+          <span>${t.desc}${detailText}</span>
+          <span>${t.type === 'expense' ? '-' : '+'}$${t.amount.toFixed(2)}
+            <button class="delete" data-index="${index}">x</button>
+          </span>
+        `;
+        transactionList.appendChild(li);
+      });
+
+      balanceDiv.textContent = `$${balance.toFixed(2)}`;
+      localStorage.setItem('transactions', JSON.stringify(transactions));
+    }
+
+    function handleTypeChange() {
+      if (typeSelect.value === 'expense') {
+        expenseDetails.classList.remove('hidden');
+      } else {
+        expenseDetails.classList.add('hidden');
+      }
+    }
+
+    typeSelect.addEventListener('change', handleTypeChange);
+
+    recurringCheckbox.addEventListener('change', () => {
+      if (recurringCheckbox.checked) {
+        recurringDetails.classList.remove('hidden');
+      } else {
+        recurringDetails.classList.add('hidden');
+      }
+    });
+
+    addTransactionForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const desc   = document.getElementById('desc').value.trim();
+      const amount = parseFloat(document.getElementById('amount').value);
+      const type   = typeSelect.value;
+      if (!desc || isNaN(amount)) return;
+
+      const transaction = { desc, amount, type };
+
+      if (type === 'expense') {
+        transaction.category = document.getElementById('category').value.trim();
+        if (recurringCheckbox.checked) {
+          transaction.recurring = true;
+          transaction.startDate = document.getElementById('startDate').value;
+          transaction.frequency = document.getElementById('frequency').value;
+        }
+      }
+
+      transactions.push(transaction);
+      addTransactionForm.reset();
+      recurringDetails.classList.add('hidden');
+      typeSelect.dispatchEvent(new Event('change'));
+      updateUI();
+    });
+
+    transactionList.addEventListener('click', e => {
+      if (e.target.classList.contains('delete')) {
+        transactions.splice(e.target.dataset.index, 1);
+        updateUI();
+      }
+    });
+
+    handleTypeChange();
+    updateUI();
+  </script>
+</body>
+</html>
